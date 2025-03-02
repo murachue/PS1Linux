@@ -24,11 +24,12 @@ int main() {
         return 1;
     }
     // Prepare the header
+    // expecting that host is Little Endian
     bu_first_block_t header = {
         0x1234,       // id
-        131072,       // size
+        131072 / 128 - 8, // whole memory card minus BU_FIRST_BLOCKS
         0x00010000,   // serial
-        3//0x01000000    // number
+        0             // number, either 0 or 1 (until ps1linux supports multi-tap :D)
     };
 
 
