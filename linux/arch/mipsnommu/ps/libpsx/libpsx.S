@@ -107,7 +107,7 @@ InitGPU:    subu	sp,sp,8
             li 		t3,0xe3000000      	# clip start
             sw 		t3,GPU0(s0)
 
-            li 		t3,0xe4000000+(512<<10)+640       # clip w, h
+            li 		t3,0xe4000000+(511<<10)+640       # clip w, h
             jal 	WaitGPU
             sw 		t3,GPU0(s0)
 
