@@ -277,6 +277,7 @@ source drivers/input/Config.in
 mainmenu_option next_comment
 comment 'Kernel hacking'
 
+bool 'Full Symbolic/Source Debugging support' CONFIG_FULLDEBUG
 bool 'Are you using a crosscompiler' CONFIG_CROSSCOMPILE
 if [ "$CONFIG_MODULES" = "y" ]; then
    bool ' Build fp execption handler module' CONFIG_MIPS_FPE_MODULE

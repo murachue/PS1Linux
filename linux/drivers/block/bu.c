@@ -194,9 +194,10 @@ static int bu_ready (int card) {
 }
 
 static void bu_hw_init (void) {
-	outw (0x40, BU_CONTROL);
-	outb (0x88, BU_REGE);
-	outb (0x0d, BU_REG8);
+	outw (0x0040, BU_CONTROL);
+	// NO$PSX also works with outb, PCSX-redux only with outw.
+	outw (0x0088, BU_REGE);
+	outw (0x000d, BU_REG8);
 	outw (0x00, BU_CONTROL);
 	BU_DELAY (10);
 	outw (0x02, BU_CONTROL);
