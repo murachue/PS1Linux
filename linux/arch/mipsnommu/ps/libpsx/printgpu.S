@@ -24,25 +24,25 @@ cls:	subu	sp,sp,4
 			jr		ra
 
 prim_cls:	END_TAG( 3 )
-  		.byte	0x0, 0x0, 0x0, 0x02			# rgb
+  		.byte	0x0, 0x0, 0x8, 0x02			# rgb
 			.short	0, 0										# x, y  
 			.short	512, 512								# w, h
 	  		
 back:
       TAG( back2, 3 )
-      .word 0x02000000
+      .word 0x02080000
       .word 0x000003c0
       .word 0x010000fe
 
 
 back2:   END_TAG( 8 )   	# Primitive of gouroud 4 point polygon
-      .word  0x38000000    # Type + bgr    top left
+      .word  0x38080000    # Type + bgr    top left
 			.short 0,0
-      .word  0x00000000   # bgr           top right
+      .word  0x00000800   # bgr           top right
 			.short 0,255
-      .word  0x00000000    # bgr           bottom left
+      .word  0x00000800    # bgr           bottom left
 			.short 659,0
-      .word  0x00000000    # bgr           bottom right
+      .word  0x00000800    # bgr           bottom right
 			.short 659,255
 
 
@@ -137,10 +137,9 @@ print_end:
 			.global	line
 
 #---------- line -----------------------
-# a0: x1
-# a1: y1
-# a2: x2
-# a3: y2
+# a0: yyyy << 16 | xxxx
+# a1: hhhh << 16 | wwww
+# a2: 00bbggrr
 line: 
 	subu		sp,sp,4
 	sw		ra,(sp)

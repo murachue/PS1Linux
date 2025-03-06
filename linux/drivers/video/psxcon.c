@@ -124,9 +124,9 @@ static inline void psxvga_writew2 (unsigned int val, int y, int x)
 {
    if (y < PSXVGA_VSCR_H && x < PSXVGA_VSCR_W)
    {
-	    line(((y*PSXVGA_FNT_H)<<16)+((x*PSXVGA_FNT_W)),((PSXVGA_FNT_H)<<16)+(PSXVGA_FNT_W),0x000100);
-	   print2 (x*PSXVGA_FNT_W, y*PSXVGA_FNT_H, val);   
+	    //line(((y*PSXVGA_FNT_H)<<16)+((x*PSXVGA_FNT_W)),((PSXVGA_FNT_H)<<16)+(PSXVGA_FNT_W),0x000100);
 	   gpu_dma_gpu_idle();                            
+	   print2 (x*PSXVGA_FNT_W, y*PSXVGA_FNT_H, val);
       
       y += psxvga_bottom;
       if (y >= PSXVGA_VSCR_H) y -= PSXVGA_VSCR_H;
@@ -146,8 +146,8 @@ static inline void psxvga_printscreen (void)
 	   {
 	      if (psxvga_scrbuf[z][x] != 0 && psxvga_scrbuf[z][x] != ' ')
 	      {
-	         print2 (x*PSXVGA_FNT_W, y*PSXVGA_FNT_H, psxvga_scrbuf[z][x]);
 	         gpu_dma_gpu_idle();
+	         print2 (x*PSXVGA_FNT_W, y*PSXVGA_FNT_H, psxvga_scrbuf[z][x]);
 	      }
 	   }
    }
@@ -158,8 +158,8 @@ static inline void psxvga_printscreen (void)
 	   {
 	      if (psxvga_scrbuf[z][x] != 0 && psxvga_scrbuf[z][x] != ' ')
 	      {
-	         print2 (x*PSXVGA_FNT_W, y*PSXVGA_FNT_H, psxvga_scrbuf[z][x]);
 	         gpu_dma_gpu_idle();
+	         print2 (x*PSXVGA_FNT_W, y*PSXVGA_FNT_H, psxvga_scrbuf[z][x]);
 	      }
 	   }
 	}
@@ -239,6 +239,7 @@ int y;
   {
  for(y=0;y<height;y++)
   psxvga_memsetw(sx,(sy+y)*PSXVGA_VSCR_W,' ', width);
+// XXX: no need to print2??
   }
  
 }
@@ -267,16 +268,17 @@ static void psxvga_cursor(struct vc_data *conp, int mode)
 
 y=psxvga_cury;
 x=psxvga_curx;
-line(((y*PSXVGA_FNT_H)<<16)+(((x)*PSXVGA_FNT_W)),((PSXVGA_FNT_H)<<16)+(PSXVGA_FNT_W),0x000100);
+//line(((y*PSXVGA_FNT_H)<<16)+(((x)*PSXVGA_FNT_W)),((PSXVGA_FNT_H)<<16)+(PSXVGA_FNT_W),0x000100);
     t=y;
       y += psxvga_bottom;
       if (y >= PSXVGA_VSCR_H) y -= PSXVGA_VSCR_H;
     
-print2 ((x)*PSXVGA_FNT_W, (t)*PSXVGA_FNT_H, psxvga_scrbuf[y][x]);
 gpu_dma_gpu_idle();
+print2 ((x)*PSXVGA_FNT_W, (t)*PSXVGA_FNT_H, psxvga_scrbuf[y][x]);
 
 x=conp->vc_x;
 y=conp->vc_y;
+gpu_dma_gpu_idle();
 line(((y*PSXVGA_FNT_H)<<16)+((x*PSXVGA_FNT_W)),((PSXVGA_FNT_H)<<16)+(PSXVGA_FNT_W),0x1122FF);
 psxvga_cury=y;
 psxvga_curx=x;
@@ -284,6 +286,39 @@ psxvga_curx=x;
 }
 
 
+#define	TAG(next,size)	(((size) << 24) | ((u32)(next) & 0x00FFffff))
+#define	END_TAG(size)	TAG(0xFFffff,size)
+#define	CLUT_ID(page, x, y)	(( page & 0xf ) << 2 )  | (( page & 0x10 ) << 10 ) | ( x >> 4 ) | ( y << 6 )
+// w and h must be <=256 (or wrapped)
+static void blit(u32 syx, u32 dyx, u32 hw) {
+	static u32 lis2[] = {
+		END_TAG(0x04),
+		0x65000000, // rectrawtexvar+bgr
+		0x00000000, // yx
+		(CLUT_ID( 21, 0, 128 ) << 16) | 0x0000, // clut+vu
+		0x00000000, // hw
+	};
+	static u32 lis1[] = {
+		0, //TAG(&lis2, 0x01),
+		0xE1000500, // texpage: drawToDispArea, 15bpptex, y0*256, x0*64
+	};
+
+	u32 sy = syx >> 16;
+	u32 sx = syx & 0xFFFF;
+	u32 dy = dyx >> 16;
+	u32 dx = dyx & 0xFFFF;
+	u32 h = hw >> 16;
+	u32 w = hw & 0xFFFF;
+
+	lis1[0] = TAG(&lis2, 0x01);
+	lis1[1] = 0xE1000500 | ((sy >> 8) << 4) | (sx >> 6);
+	lis2[2] = (dy << 16) | dx;
+	lis2[3] = ((CLUT_ID( 21, 0, 128 )) << 16) | ((sy & 0xFF) << 8) | (sx & 0x3F);
+	lis2[4] = ((u32)h << 16) | w;
+
+	gpu_dma_gpu_idle();
+	SendList(&lis1);
+}
 
 static int psxvga_scroll(struct vc_data *conp, int t, int b, int dir, int count)
 {
@@ -301,6 +336,22 @@ static int psxvga_scroll(struct vc_data *conp, int t, int b, int dir, int count)
 	      if (psxvga_bottom >= PSXVGA_VSCR_H)
             psxvga_bottom -= PSXVGA_VSCR_H;
             
+
+			// TODO t,b?
+			gpu_dma_gpu_idle();
+			//blit(0, count * PSXVGA_FNT_H, 0, 0, PSXVGA_VSCR_W * PSXVGA_FNT_W, (PSXVGA_VSCR_H - count) * PSXVGA_FNT_H);
+			{
+				const u32 syp = (count * PSXVGA_FNT_H);
+				const u32 hp = ((PSXVGA_VSCR_H - count) * PSXVGA_FNT_H);
+				blit(  0 | (syp << 16),   0 | (0 << 16),                                 256  | (hp << 16));
+				blit(256 | (syp << 16), 256 | (0 << 16),                                 256  | (hp << 16));
+				blit(512 | (syp << 16), 512 | (0 << 16), (PSXVGA_VSCR_W * PSXVGA_FNT_W - 512) | (hp << 16));
+			}
+			{
+				const u32 hp = (PSXVGA_FNT_H * count);
+				line(0 | ((PSXVGA_VSCR_H * PSXVGA_FNT_H - hp) << 16), (PSXVGA_VSCR_W * PSXVGA_FNT_W) | (hp << 16), 0x080000);
+			}
+
          break;
          
       case SM_DOWN:
@@ -308,7 +359,7 @@ static int psxvga_scroll(struct vc_data *conp, int t, int b, int dir, int count)
          break;
    }
    
-	psxvga_printscreen ();    
+	//psxvga_printscreen ();
 //	scrup();
    return 0;
 }
