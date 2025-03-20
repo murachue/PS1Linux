@@ -327,6 +327,15 @@ static int psxvga_scroll(struct vc_data *conp, int t, int b, int dir, int count)
    switch (dir)
    {
       case SM_UP:
+			// hide cursor before scrolling
+			y=psxvga_cury;
+			x=psxvga_curx;
+			i=y;
+			y += psxvga_bottom;
+			if (y >= PSXVGA_VSCR_H) y -= PSXVGA_VSCR_H;
+			gpu_dma_gpu_idle();
+			print2 ((x)*PSXVGA_FNT_W, (i)*PSXVGA_FNT_H, psxvga_scrbuf[y][x]);
+
 		   for (y = psxvga_bottom, i = 0; i < count; i++, y++) {
             if (y >= PSXVGA_VSCR_H) y = 0;
 		      for (x = 0; x < PSXVGA_VSCR_W; x++)
@@ -335,7 +344,6 @@ static int psxvga_scroll(struct vc_data *conp, int t, int b, int dir, int count)
          psxvga_bottom += count;
 	      if (psxvga_bottom >= PSXVGA_VSCR_H)
             psxvga_bottom -= PSXVGA_VSCR_H;
-            
 
 			// TODO t,b?
 			gpu_dma_gpu_idle();
@@ -351,6 +359,12 @@ static int psxvga_scroll(struct vc_data *conp, int t, int b, int dir, int count)
 				const u32 hp = (PSXVGA_FNT_H * count);
 				line(0 | ((PSXVGA_VSCR_H * PSXVGA_FNT_H - hp) << 16), (PSXVGA_VSCR_W * PSXVGA_FNT_W) | (hp << 16), 0x080000);
 			}
+
+			// show cursor after scroll
+			y=psxvga_cury;
+			x=psxvga_curx;
+			gpu_dma_gpu_idle();
+			line(((y*PSXVGA_FNT_H)<<16)+((x*PSXVGA_FNT_W)),((PSXVGA_FNT_H)<<16)+(PSXVGA_FNT_W),0x1122FF);
 
          break;
          
