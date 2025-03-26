@@ -88,10 +88,21 @@ static const char *psxvga_startup (void)
    psxvga_cury = 0;	
    psxvga_curx = 0;
    
-    mode=0x8000009;
+    mode=0x08000009; // 320w
 #ifdef CONFIG_VT_CONSOLE_HIRES 
-    mode=0x800000b;
-#endif    
+    mode=0x0800000b; // 640w
+#endif
+
+   // super-hacky NTSC/PAL detection: use ROM version string
+   // we can take just 1F801814.20 for normal booting,
+   // but for instance PCSX-redux "Load binary" that register does not set correctly.
+   // we guess(!) it from ROM area!!
+   // note: SCPH-1000 is known to not have the version string.
+   // note: SCPH-3000 looks like it have irregular. (not "J" but 199"5")
+   // note: alternative ROMs will not have it at all. (NO$PSX have " "(space)? Openbios lacks?)
+   if (*(volatile char *)0xBFC7ff52 != 'E')
+      mode &= ~0x00000008; // drop PAL
+
      InitGPU (mode);
    cls ();
    LoadFont ();
