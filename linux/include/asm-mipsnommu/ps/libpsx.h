@@ -5,7 +5,7 @@
 #ifndef __ASM_PS_LIBPSX_H 
 #define __ASM_PS_LIBPSX_H 
 
-void InitGPU( int );
+void InitGPU( int, int, int );
 void cls( void );
 void mem2vram( void *, int, int, int );
 void LoadFont( void );

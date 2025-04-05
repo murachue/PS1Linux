@@ -80,7 +80,7 @@ static const char *psxvga_startup (void)
 {
    const char *display_desc = "PSXGPU console";
    int  x, y;
-   unsigned long mode;
+   unsigned long mode, hrange, vrange;
    for (y = 0; y < PSXVGA_VSCR_H; y++)
       for (x = 0; x < PSXVGA_VSCR_W; x++)
          psxvga_scrbuf[y][x] = 0;
@@ -88,11 +88,6 @@ static const char *psxvga_startup (void)
    psxvga_cury = 0;	
    psxvga_curx = 0;
    
-    mode=0x08000009; // 320w
-#ifdef CONFIG_VT_CONSOLE_HIRES 
-    mode=0x0800000b; // 640w
-#endif
-
    // super-hacky NTSC/PAL detection: use ROM version string
    // we can take just 1F801814.20 for normal booting,
    // but for instance PCSX-redux "Load binary" that register does not set correctly.
@@ -100,10 +95,32 @@ static const char *psxvga_startup (void)
    // note: SCPH-1000 is known to not have the version string.
    // note: SCPH-3000 looks like it have irregular. (not "J" but 199"5")
    // note: alternative ROMs will not have it at all. (NO$PSX have " "(space)? Openbios lacks?)
-   if (*(volatile char *)0xBFC7ff52 != 'E')
-      mode &= ~0x00000008; // drop PAL
+   if (*(volatile char *)0xBFC7ff52 == 'E') {
+      // PAL
+#ifdef CONFIG_VT_CONSOLE_HIRES
+      mode=0x0800000b; // 640w, 240p, PAL, 15bpp
+      //hrange = 0x06cb02b0; // 688 | ((688+2560)<<12) | 0x06000000
+      hrange = 0x06c60260; // 608:(608+320*8)
+#else
+      mode=0x08000009; // 320w, 240p, PAL, 15bpp
+      //hrange = 0x06cb02b0; // 688 | ((688+2560)<<12) | 0x06000000
+      hrange = 0x06c60260; // 608:(608+320*8) ?
+#endif
+      //vrange = 0x07049025; // 0x025-0x124
+      vrange = 0x07048c23; // (163-128):(163+128)
+   } else {
+      // should be NTSC
+#ifdef CONFIG_VT_CONSOLE_HIRES
+      mode=0x08000003; // 640w, 240p, no-PAL, 15bpp
+      hrange = 0x06c60260; // 608:(608+320*8)
+#else
+      mode=0x08000001; // 320w, 240p, no-PAL, 15bpp
+      hrange = 0x06c60260; // 608:(608+320*8) ?
+#endif
+      vrange = 0x07040010; // (136-120):(136+120)
+   }
 
-     InitGPU (mode);
+   InitGPU (mode, hrange, vrange);
    cls ();
    LoadFont ();
     psxvga_bottom = 0;

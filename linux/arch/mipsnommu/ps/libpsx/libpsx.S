@@ -70,7 +70,9 @@ loop_gpu_dma_idle:
 
 #----------- InitGPU - basic GPU init routine ----------------------------------
 
-#in: a0: display mode
+#in: a0: display mode (GP1 08h)
+#    a1: horizontal range (GP1 06h)
+#    a2: vertical range (GP1 07h)
 
 			.global	InitGPU
 
@@ -88,11 +90,11 @@ InitGPU:    subu	sp,sp,8
             sw 		t3,GPU1(s0)
 
 #            li 		t3,0x06c40240       # horizontal start/end    
-            li		t3,HPOS|((HPOS+2560)<<12)|0x06000000
-            sw 		t3,GPU1(s0)
+#            li		t3,HPOS|((HPOS+2560)<<12)|0x06000000
+            sw 		a1,GPU1(s0)
 
-            li 		t3,0x07049025    	# vertical start/end
-            sw 		t3,GPU1(s0)
+#            li 		t3,0x07049025    	# vertical start/end
+            sw 		a2,GPU1(s0)
 
             li 		t3,0xe1000686    	# draw mode, texture page = (8bit,320,0)
             jal 	WaitGPU
